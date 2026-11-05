@@ -93,14 +93,39 @@ the assignment form is the one that stays exploitable on 0.8.
 
 ## Demo on Remix
 
+Two ways to see it: one click in the Deploy & Run panel, or the unit-test
+plugin. Both use the same `Vault`, `VaultFixed`, and `Attacker` from
+`sol/Vault.sol`.
+
+### One click: the factory
+
+`sol/ReentrancyDemo.sol` is a factory. It holds the subject (a vault it
+deploys) and deploys the attack contract, so the whole scenario stands up in
+a single deployment and runs on a single button.
+
+1. Open `Vault.sol` and `ReentrancyDemo.sol` from `sol/` in the Remix
+   workspace (same folder, so `import "./Vault.sol"` resolves). Compile.
+2. In the "Deploy & Run" panel, set the "Value" field to 3 ether.
+3. In the `ReentrancyDemo` constructor field, pass `false` to attack the
+   defective `Vault` (or `true` for `VaultFixed`), and Deploy.
+4. Call `report` to read the starting balances, press `attack`, then call
+   `report` again.
+
+What `report` returns as `(vaultEther, attackerEther, ledgerOwed)`:
+
+| moment | vault | attacker | ledger owed |
+|---|---|---|---|
+| before `attack` | 3 ether | 0 | 3 ether |
+| after `attack`, `Vault` | 0 | 3 ether | 2 ether (the honest 2 ether is gone) |
+| after `attack`, `VaultFixed` | 2 ether | 1 ether | 2 ether (nothing stolen) |
+
+### The unit tests
+
 `sol/Vault_test.sol` turns each refuted property into a Solidity unit test
 that runs in the Remix "Solidity Unit Testing" plugin. A passing test on the
 defective `Vault` means the exploit the TLA+ model predicted actually runs.
 
-Steps:
-
-1. Open `Vault.sol` and `Vault_test.sol` from `sol/` in the Remix workspace
-   (same folder, so the `import "./Vault.sol"` resolves).
+1. Open `Vault.sol` and `Vault_test.sol` from `sol/` in the Remix workspace.
 2. Open the "Solidity Unit Testing" plugin from the left sidebar.
 3. Point it at `Vault_test.sol` and press "Run".
 

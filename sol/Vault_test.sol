@@ -20,37 +20,10 @@ pragma solidity ^0.8.20;
 import "remix_tests.sol";
 import "./Vault.sol";
 
-// The depositor whose receive() calls withdraw() again while the vault's own
-// withdraw() is still parked at its external call. Written against an
-// interface so one attacker drives both the defective and the fixed vault.
-interface IVault {
-    function deposit() external payable;
-    function withdraw() external;
-}
-
-contract ReentrantWithdrawer {
-    IVault public immutable vault;
-    uint256 public immutable stake;
-
-    constructor(IVault v) payable {
-        vault = v;
-        stake = msg.value;
-        v.deposit{value: msg.value}();
-    }
-
-    function attack() external {
-        vault.withdraw();
-    }
-
-    // Reenter while the vault still holds enough to pay another round. A
-    // reentrant round that reverts (the fixed vault, whose ledger is already
-    // zeroed) is swallowed, so the outer call still returns.
-    receive() external payable {
-        if (address(vault).balance >= stake) {
-            try vault.withdraw() {} catch {}
-        }
-    }
-}
+// The attacker is `Attacker` from Vault.sol, the same contract the Remix
+// factory (ReentrancyDemo.sol) deploys: it deposits its stake in the
+// constructor, reenters withdraw() from receive(), and swallows a reentrant
+// round that reverts. One attacker drives both vault variants through IVault.
 
 contract VaultSecurityTest {
     uint256 constant HONEST_DEPOSIT = 2 ether;
@@ -63,8 +36,8 @@ contract VaultSecurityTest {
     function theftOnDefectiveVault() public payable {
         Vault vault = new Vault();
         vault.deposit{value: HONEST_DEPOSIT}(); // this contract is the honest depositor
-        ReentrantWithdrawer attacker =
-            new ReentrantWithdrawer{value: ATTACKER_DEPOSIT}(IVault(address(vault)));
+        Attacker attacker =
+            new Attacker{value: ATTACKER_DEPOSIT}(IVault(address(vault)));
 
         attacker.attack();
 
@@ -81,8 +54,8 @@ contract VaultSecurityTest {
     function insolvencyOnDefectiveVault() public payable {
         Vault vault = new Vault();
         vault.deposit{value: HONEST_DEPOSIT}();
-        ReentrantWithdrawer attacker =
-            new ReentrantWithdrawer{value: ATTACKER_DEPOSIT}(IVault(address(vault)));
+        Attacker attacker =
+            new Attacker{value: ATTACKER_DEPOSIT}(IVault(address(vault)));
 
         attacker.attack();
 
@@ -102,8 +75,8 @@ contract VaultSecurityTest {
     function fixPreventsTheft() public payable {
         VaultFixed vault = new VaultFixed();
         vault.deposit{value: HONEST_DEPOSIT}();
-        ReentrantWithdrawer attacker =
-            new ReentrantWithdrawer{value: ATTACKER_DEPOSIT}(IVault(address(vault)));
+        Attacker attacker =
+            new Attacker{value: ATTACKER_DEPOSIT}(IVault(address(vault)));
 
         attacker.attack();
 
@@ -120,8 +93,8 @@ contract VaultSecurityTest {
     function fixStaysSolvent() public payable {
         VaultFixed vault = new VaultFixed();
         vault.deposit{value: HONEST_DEPOSIT}();
-        ReentrantWithdrawer attacker =
-            new ReentrantWithdrawer{value: ATTACKER_DEPOSIT}(IVault(address(vault)));
+        Attacker attacker =
+            new Attacker{value: ATTACKER_DEPOSIT}(IVault(address(vault)));
 
         attacker.attack();
 

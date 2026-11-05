@@ -254,3 +254,8 @@ A passing test on `Vault` means the exploit the model predicted actually ran:
 green is the alarm, not the all-clear. The checkers prove the property fails
 for every interleaving within the bound; the Remix test shows one of those
 interleavings executing on the EVM.
+
+For a live demo rather than a test run, `../sol/ReentrancyDemo.sol` is a
+factory: deploy it with 3 ether of value, press `attack`, and `report` shows
+the vault draining to 0 and the attacker's holdings rising to 3 ether, the
+same trace one button at a time.

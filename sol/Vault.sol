@@ -40,10 +40,10 @@ contract VaultFixed {
 /// The depositor whose receive() calls back into the vault while the
 /// vault's own withdraw() is still waiting on the transfer.
 contract Attacker {
-    Vault public immutable vault;
+    IVault public immutable vault;
     uint256 public immutable stake;
 
-    constructor(Vault v) payable {
+    constructor(IVault v) payable {
         vault = v;
         stake = msg.value;
         v.deposit{value: msg.value}();
@@ -58,4 +58,14 @@ contract Attacker {
             try vault.withdraw() {} catch {}                   // a failed round is swallowed; the outer call still succeeds
         }
     }
+}
+
+/// The surface shared by both vault variants, so one Attacker drives either.
+/// `Vault` and `VaultFixed` match it structurally; neither declares `is
+/// IVault`, so there is nothing to keep in sync and no `override` noise. The
+/// factory and the attacker reach a vault only through this interface.
+interface IVault {
+    function deposit() external payable;
+    function withdraw() external;
+    function balances(address) external view returns (uint256);
 }
